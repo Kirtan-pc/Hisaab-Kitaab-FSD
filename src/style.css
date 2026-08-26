@@ -1,0 +1,87 @@
+/* Import Tailwind's generated utility classes used in main.ts. */
+@import "tailwindcss";
+
+/* Named colours keep utilities such as bg-paper and text-ink meaningful. */
+@theme {
+  --color-paper: #f4eddd;
+  --color-paper-deep: #e9dec7;
+  --color-burgundy: #75252b;
+  --color-burgundy-dark: #50171d;
+  --color-ink: #252725;
+  --color-ink-soft: #706f67;
+  --color-line: #cfc3ad;
+  --color-margin: #c8827f;
+  --color-gold: #d6b15b;
+  --color-paid: #397053;
+  --color-due: #a34c42;
+}
+
+/* Use a sturdy, readable system font and remove the browser's default page gap. */
+html { -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0;
+  min-width: 320px;
+  color: #252725;
+  background: #d9d0c0;
+  font-family: "Nirmala UI", "Segoe UI", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* This is the centred notebook on desktop, while remaining edge-to-edge on phones. */
+.diary-shell { min-height: 100dvh; position: relative; overflow: hidden; }
+
+/* Ruled lines and a margin line make the main screens read as paper pages. */
+.paper-page {
+  background-color: #f4eddd;
+  background-image:
+    linear-gradient(90deg, transparent 0, transparent 53px, rgba(200, 130, 127, .55) 53px, rgba(200, 130, 127, .55) 55px, transparent 55px),
+    repeating-linear-gradient(to bottom, transparent 0, transparent 34px, rgba(126, 112, 90, .14) 34px, rgba(126, 112, 90, .14) 35px);
+  background-position: 0 74px, 0 74px;
+}
+
+/* A left binding and tiny texture details make the first view feel like a physical cover. */
+.diary-cover {
+  background-color: #75252b;
+  background-image:
+    linear-gradient(90deg, rgba(0, 0, 0, .26) 0 15px, transparent 15px 20px, rgba(255, 255, 255, .08) 20px 21px, transparent 21px),
+    radial-gradient(circle at 80% 10%, rgba(214, 177, 91, .12) 0 2px, transparent 2.5px),
+    linear-gradient(135deg, #8c3439, #661e26 55%, #4e151c);
+  background-size: auto, 19px 19px, auto;
+}
+
+/* Decorative stitched lines are non-interactive so they never block a button. */
+.cover-stitching::before, .cover-stitching::after { content: ""; position: absolute; inset-inline: 26px; height: 1px; border-top: 1px dashed rgba(214, 177, 91, .45); }
+.cover-stitching::before { top: 26px; }
+.cover-stitching::after { bottom: 26px; }
+
+/* This highlights a selected product without relying on colour alone. */
+.product-choice:has(input:checked) { border-color: #75252b; box-shadow: inset 4px 0 0 #75252b; background: rgba(117, 37, 43, .05); }
+
+/* Touch feedback makes large mobile buttons feel immediate. */
+.pressable { transition: transform .16s ease, background-color .16s ease, box-shadow .16s ease; }
+.pressable:active { transform: translateY(1px) scale(.985); }
+.pressable:focus-visible { outline: 3px solid rgba(214, 177, 91, .9); outline-offset: 3px; }
+
+/* Simple slide animations suggest turning a page without a distracting 3D effect. */
+@keyframes page-in-right { from { opacity: .45; transform: translateX(18%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes page-out-left { from { opacity: 1; transform: translateX(0); } to { opacity: .2; transform: translateX(-12%); } }
+@keyframes page-in-left { from { opacity: .45; transform: translateX(-18%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes page-out-right { from { opacity: 1; transform: translateX(0); } to { opacity: .2; transform: translateX(12%); } }
+.page-in-right { animation: page-in-right .38s ease-out forwards; }
+.page-out-left { animation: page-out-left .38s ease-in forwards; }
+.page-in-left { animation: page-in-left .38s ease-out forwards; }
+.page-out-right { animation: page-out-right .38s ease-in forwards; }
+
+/* Hide a scrollbar only where touch and wheel scrolling still work. */
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+
+/* Respect people who ask their device to reduce animated movement. */
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+
+/* On wide screens, the app stays a believable notebook instead of stretching into a dashboard. */
+@media (min-width: 700px) {
+  body { padding: 24px; }
+  #app { max-width: 450px; margin: 0 auto; box-shadow: 0 20px 55px rgba(54, 41, 26, .28); }
+  .diary-shell { min-height: calc(100dvh - 48px); border: 1px solid rgba(80, 23, 29, .18); }
+}

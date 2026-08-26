@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <rect x="6" y="2" width="36" height="44" rx="3" fill="#722f37" stroke="#c9a84c" stroke-width="1.5"/>
+  <rect x="10" y="6" width="28" height="36" rx="1" fill="#f5f0e8" stroke="#d4c9b5" stroke-width="0.5"/>
+  <line x1="16" y1="2" x2="16" y2="46" stroke="#c9a84c" stroke-width="0.75" opacity="0.5"/>
+  <line x1="20" y1="18" x2="34" y2="18" stroke="#d4c9b5" stroke-width="0.5"/>
+  <line x1="20" y1="24" x2="32" y2="24" stroke="#d4c9b5" stroke-width="0.5"/>
+  <line x1="20" y1="30" x2="34" y2="30" stroke="#d4c9b5" stroke-width="0.5"/>
+  <text x="24" y="14" text-anchor="middle" font-size="5" font-weight="bold" fill="#722f37">हिसाब</text>
+</svg>

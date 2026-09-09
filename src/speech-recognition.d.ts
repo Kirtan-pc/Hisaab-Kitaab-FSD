@@ -1,53 +1,45 @@
-// Type declarations for the Web Speech API.
-// The Web Speech API (SpeechRecognition) is a browser feature, not a standard
-// TypeScript lib. We declare the types here so TypeScript understands them.
-
 interface SpeechRecognitionEvent extends Event {
-  readonly results: SpeechRecognitionResultList;
+  results: SpeechRecognitionResultList;
 }
 
 interface SpeechRecognitionResultList {
-  readonly length: number;
-  item(index: number): SpeechRecognitionResult;
   [index: number]: SpeechRecognitionResult;
+  length: number;
 }
 
 interface SpeechRecognitionResult {
-  readonly length: number;
-  item(index: number): SpeechRecognitionAlternative;
   [index: number]: SpeechRecognitionAlternative;
-  readonly isFinal: boolean;
+  isFinal: boolean;
+  length: number;
 }
 
 interface SpeechRecognitionAlternative {
-  readonly transcript: string;
-  readonly confidence: number;
+  transcript: string;
+  confidence: number;
 }
 
-interface SpeechRecognitionErrorEvent extends Event {
-  readonly error: string;
-  readonly message: string;
+declare global {
+  interface SpeechRecognition extends EventTarget {
+    lang: string;
+    interimResults: boolean;
+    maxAlternatives: number;
+    onstart: (() => void) | null;
+    onresult: ((event: SpeechRecognitionEvent) => void) | null;
+    onerror: ((event: Event) => void) | null;
+    onend: (() => void) | null;
+    start: () => void;
+    stop: () => void;
+    abort: () => void;
+  }
+
+  interface SpeechRecognitionConstructor {
+    new (): SpeechRecognition;
+  }
+
+  interface Window {
+    SpeechRecognition?: SpeechRecognitionConstructor;
+    webkitSpeechRecognition?: SpeechRecognitionConstructor;
+  }
 }
 
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  maxAlternatives: number;
-  onstart: ((this: SpeechRecognition, ev: Event) => void) | null;
-  onresult: ((this: SpeechRecognition, ev: SpeechRecognitionEvent) => void) | null;
-  onerror: ((this: SpeechRecognition, ev: SpeechRecognitionErrorEvent) => void) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => void) | null;
-  start(): void;
-  stop(): void;
-  abort(): void;
-}
-
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognition;
-}
-
-interface Window {
-  SpeechRecognition?: SpeechRecognitionConstructor;
-  webkitSpeechRecognition?: SpeechRecognitionConstructor;
-}
+export {};

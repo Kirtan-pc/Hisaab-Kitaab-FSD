@@ -7,13 +7,15 @@
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 
+    /* JSX — tells TypeScript how to handle JSX syntax */
+    "jsx": "react-jsx",
+
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "moduleDetection": "force",
     "noEmit": true,
-    "jsx": "react-jsx",
 
     /* Linting */
     "noUnusedLocals": true,

@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
@@ -78,6 +79,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     "hisaab-orders",
     initialOrders,
   );
+
+  useEffect(() => {
+    fetch("/api/health").catch(() => {
+      // The frontend continues using localStorage when the backend is offline.
+    });
+  }, []);
 
   function addOrder(
     customerName: string,

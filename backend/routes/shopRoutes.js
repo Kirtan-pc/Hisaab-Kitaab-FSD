@@ -10,7 +10,7 @@ router.use(requireAuth);
 
 async function getOwnShop(shopId) {
   return Shop.findById(shopId)
-    .select("name ownerPhone products createdAt updatedAt")
+    .select("name email ownerPhone role products createdAt updatedAt")
     .populate("products");
 }
 
@@ -55,7 +55,7 @@ router.patch(
       req.auth.shopId,
       { name: req.body.name },
       { new: true, runValidators: true },
-    ).select("name ownerPhone products createdAt updatedAt");
+    ).select("name email ownerPhone role products createdAt updatedAt");
 
     if (!shop) return res.status(404).json({ message: "Shop not found." });
     return res.json(shop);

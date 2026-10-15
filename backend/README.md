@@ -95,3 +95,171 @@ npm test
 ```
 
 These HTTP smoke tests use Node's built-in test runner and do not need MongoDB. They check headers, unauthenticated access, validation, malformed JSON, CORS, and password-hash serialization. Database-backed registration and ledger CRUD still require a configured MongoDB connection.
+
+## Experiment 6 — JWT Authentication and Roles
+
+Experiment 6 extends the same `Shop` account model used by Experiment 5. A
+shop owner is the project's account/user, and the shop document is also the
+tenant boundary for that owner's products, customers, orders, and payments.
+There is no second `User` collection.
+
+New registrations use `name`, `email`, `ownerPhone`, and `password`. Email is
+trimmed and lowercased. The phone remains required for compatibility with
+existing shop accounts and phone-number login. Registration always creates a
+`user` role. The request allowlist rejects a submitted `role`, so a public
+client cannot promote itself.
+
+JWTs contain the account ID in `sub` and the signed `role` claim. They expire
+after one hour. Existing signed Experiment 5 tokens with no role claim are
+treated as ordinary `user` tokens until they expire. Each new login gets the
+current stored role.
+
+### Administrator provisioning
+
+There is no public role-change endpoint. First register an ordinary account,
+then run this controlled command from the backend directory using that
+account's email:
+
+```bash
+npm run admin:promote -- owner@example.com
+```
+
+The script updates only an existing account, requires the private MongoDB
+connection in `backend/.env`, and never prints credentials. Sign in again after
+promotion so the returned JWT contains the administrator role.
+
+### Demonstration endpoints
+
+| Method | URL | Access |
+| --- | --- | --- |
+| `POST` | `/api/auth/register` | Public; creates an ordinary account |
+| `POST` | `/api/auth/login` | Public; accepts email or legacy phone plus password |
+| `GET` | `/api/auth/me` | Any authenticated account |
+| `GET` | `/api/protected` | Any authenticated account |
+| `GET` | `/api/admin` | Administrator role only |
+
+### Exact Postman workflow
+
+Use `http://localhost:5000` as the base URL. For JSON requests, select
+**Body → raw → JSON** and add `Content-Type: application/json`.
+
+1. **Register an ordinary user** — `POST /api/auth/register`, no token:
+
+   ```json
+   {
+     "name": "Shankar Tea Stall",
+     "email": "owner@example.com",
+     "ownerPhone": "9876543210",
+     "password": "sample-password-12"
+   }
+   ```
+
+   Expected `201 Created`. The response has `token` and `shop` with `id`,
+   `name`, `email`, `ownerPhone`, and `role: "user"`. It never contains a
+   password or hash. Use a new email and phone if those values already exist.
+
+2. **Try duplicate registration** — repeat the request with the same email
+   (use a different phone). Expected `409 Conflict` and
+   `{"message":"A record with that unique value already exists."}`.
+
+3. **Try self-promotion** — submit the registration body with
+   `"role": "admin"` added. Expected `400 Bad Request`; the response identifies
+   `role` as an unsupported field and no account is created.
+
+4. **Sign in** — `POST /api/auth/login`:
+
+   ```json
+   {
+     "email": "owner@example.com",
+     "password": "sample-password-12"
+   }
+   ```
+
+   Expected `200 OK` with a new `token` and safe `shop` details. An incorrect
+   email/password pair returns `401` with a generic message.
+
+5. **Copy the JWT** from the login response's `token` value. In Postman, open
+   the request's **Authorization** tab, choose **Bearer Token**, and paste
+   the token (without adding quotation marks). Postman sends
+   `Authorization: Bearer <token>`.
+
+6. **No token** — `GET /api/protected`, Authorization set to **No Auth**.
+   Expected `401 Unauthorized` with
+   `{"message":"A valid bearer token is required."}`.
+
+7. **User protected route** — `GET /api/protected` with the ordinary user's
+   bearer token. Expected `200 OK`:
+
+   ```json
+   {
+     "message": "You are authenticated.",
+     "account": { "id": "<shop-id>", "role": "user" }
+   }
+   ```
+
+8. **User denied admin route** — `GET /api/admin` with the same token.
+   Expected `403 Forbidden` and
+   `{"message":"You do not have permission to access this resource."}`.
+   Changing a URL, query string, or request body role does not change the
+   signed role in the token.
+
+9. **Provision an administrator** using the command above from the
+   `backend/` directory. This is a local operator action, not an HTTP endpoint.
+
+10. **Sign in as the administrator** with `POST /api/auth/login` and the
+    administrator account's email/password. In Postman, replace the previous
+    bearer token with this login response's token.
+
+11. **Admin route** — `GET /api/admin` with the administrator token. Expected
+    `200 OK`:
+
+    ```json
+    {
+      "message": "Administrator access granted.",
+      "account": { "id": "<shop-id>", "role": "admin" }
+    }
+    ```
+
+12. **Current account** — `GET /api/auth/me` with either account's valid
+    token. Expected `200 OK` with `id`, `name`, `email`, `ownerPhone`, and the
+    stored `role`; password fields are not returned.
+
+13. **Invalid token** — replace the token with `not-a-real-token` and repeat
+    step 7. Expected `401 Unauthorized`. Expired-token rejection is also
+    covered by the automated tests.
+
+### Frontend demonstration
+
+Start the API and Vite client in separate terminals. On the cover page select
+**Sign in / registration demo**. Register or sign in, inspect the returned
+account role, and test `/api/auth/me` and `/api/protected`. The administrator
+button is shown only for an administrator account; the backend still checks
+every request. The original local diary preview remains available separately.
+The demo keeps its JWT in component memory and clears it on sign-out or a `401`;
+it does not put the token in local storage.
+
+### Screenshot checklist
+
+Capture genuine results from your own run; do not fabricate screenshots.
+
+1. `01-project-structure.png` — `backend/`, `frontend/`, and auth files in VS Code.
+2. `02-user-registration.png` — successful `201` ordinary-user registration.
+3. `03-duplicate-registration.png` — duplicate email returning `409`.
+4. `04-user-login-jwt.png` — successful login and token field (keep the token private).
+5. `05-protected-without-token.png` — `401` from `/api/protected`.
+6. `06-protected-with-user-token.png` — `200` from `/api/protected`.
+7. `07-admin-denies-user.png` — `403` from `/api/admin` for a user token.
+8. `08-admin-login.png` — admin login response (keep the token private).
+9. `09-admin-route-success.png` — `200` from `/api/admin`.
+10. `10-auth-me.png` — `/api/auth/me` showing the account role.
+11. `11-auth-middleware-code.png` — `requireAuth` and `authorizeRoles` in VS Code.
+12. `12-automated-tests.png` — all backend tests passing.
+13. `13-server-and-database.png` — backend listening and `/api/health` reporting a connected database.
+
+### Test scope
+
+`npm test` runs 22 HTTP and model tests without requiring MongoDB. Model
+operations in account tests are controlled test doubles; these are not genuine
+database integration tests. A real registration, login, and role-promotion
+demonstration requires the configured private MongoDB connection and fresh
+test account values.

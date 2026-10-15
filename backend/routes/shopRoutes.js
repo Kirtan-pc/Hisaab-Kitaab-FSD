@@ -1,36 +1,65 @@
 const express = require("express");
+const { body, param } = require("express-validator");
 const Shop = require("../models/Shop");
+const { requireAuth } = require("../middleware/authMiddleware");
+const { allowOnly, validateRequest } = require("../middleware/validateRequest");
 
 const router = express.Router();
 
-router.get("/", async (_req, res) => {
-  res.json(await Shop.find().populate("products"));
+router.use(requireAuth);
+
+async function getOwnShop(shopId) {
+  return Shop.findById(shopId)
+    .select("name ownerPhone products createdAt updatedAt")
+    .populate("products");
+}
+
+router.get("/", async (req, res) => {
+  const shop = await getOwnShop(req.auth.shopId);
+  if (!shop) return res.status(404).json({ message: "Shop not found." });
+  return res.json(shop);
 });
 
-router.get("/:id", async (req, res) => {
-  const shop = await Shop.findById(req.params.id).populate("products");
-  if (!shop) return res.status(404).json({ message: "Shop not found" });
-  res.json(shop);
-});
+router.get(
+  "/:id",
+  [param("id").isMongoId().withMessage("Shop ID is invalid."), validateRequest],
+  async (req, res) => {
+    if (req.params.id.toLowerCase() !== req.auth.shopId.toLowerCase()) {
+      return res.status(404).json({ message: "Shop not found." });
+    }
 
-router.post("/", async (req, res) => {
-  const shop = await Shop.create(req.body);
-  res.status(201).json(shop);
-});
+    const shop = await getOwnShop(req.auth.shopId);
+    if (!shop) return res.status(404).json({ message: "Shop not found." });
+    return res.json(shop);
+  },
+);
 
-router.patch("/:id", async (req, res) => {
-  const shop = await Shop.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-  if (!shop) return res.status(404).json({ message: "Shop not found" });
-  res.json(shop);
-});
+router.patch(
+  "/:id",
+  allowOnly(["name"]),
+  [
+    param("id").isMongoId().withMessage("Shop ID is invalid."),
+    body("name")
+      .isString()
+      .trim()
+      .isLength({ min: 1, max: 100 })
+      .withMessage("Shop name must be between 1 and 100 characters."),
+    validateRequest,
+  ],
+  async (req, res) => {
+    if (req.params.id.toLowerCase() !== req.auth.shopId.toLowerCase()) {
+      return res.status(404).json({ message: "Shop not found." });
+    }
 
-router.delete("/:id", async (req, res) => {
-  const shop = await Shop.findByIdAndDelete(req.params.id);
-  if (!shop) return res.status(404).json({ message: "Shop not found" });
-  res.status(204).end();
-});
+    const shop = await Shop.findByIdAndUpdate(
+      req.auth.shopId,
+      { name: req.body.name },
+      { new: true, runValidators: true },
+    ).select("name ownerPhone products createdAt updatedAt");
+
+    if (!shop) return res.status(404).json({ message: "Shop not found." });
+    return res.json(shop);
+  },
+);
 
 module.exports = router;

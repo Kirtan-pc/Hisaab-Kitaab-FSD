@@ -1,20 +1,56 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const helmet = require("helmet");
+const { rateLimit } = require("express-rate-limit");
 require("dotenv").config();
-require("dotenv").config({ path: "atlas-credentials.env" });
 
+const authRoutes = require("./routes/authRoutes");
 const shopRoutes = require("./routes/shopRoutes");
 const productRoutes = require("./routes/productRoutes");
 const customerRoutes = require("./routes/customerRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const { errorHandler, notFound } = require("./middleware/errorMiddleware");
 
 const app = express();
+app.disable("x-powered-by");
 
-app.use(cors());
-app.use(express.json());
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
+app.use(helmet());
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      const error = new Error("Origin is not allowed.");
+      error.status = 403;
+      return callback(error);
+    },
+    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  }),
+);
+app.use(express.json({ limit: "10kb" }));
+
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many requests. Please try again later." },
+  }),
+);
+
+app.use("/api/auth", authRoutes);
 app.use("/api/shops", shopRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/customers", customerRoutes);
@@ -34,26 +70,32 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-const mongoUri =
-  process.env.MONGO_URI && !process.env.MONGO_URI.includes("<db_username>")
-    ? process.env.MONGO_URI
-    : process.env.MONGODB_URI;
+app.use(notFound);
+app.use(errorHandler);
 
-if (mongoUri) {
-  mongoose
-    .connect(mongoUri, { serverSelectionTimeoutMS: 5000 })
-    .then(() => {
-      console.log("MongoDB Connected");
-    })
-    .catch((error) => {
-      console.error("MongoDB Connection Error:", error.message);
-    });
-} else {
-  console.warn("MONGO_URI is not configured; starting without MongoDB.");
+async function startServer() {
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
+    throw new Error("JWT_SECRET must contain at least 32 characters.");
+  }
+
+  const mongoUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  if (!mongoUri || mongoUri.includes("<db_username>")) {
+    throw new Error("Set a valid MONGO_URI in backend/.env before starting.");
+  }
+
+  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
+
+  const port = process.env.PORT || 5000;
+  return app.listen(port, () => {
+    console.log(`Hisaab Kitaab API listening on port ${port}`);
+  });
 }
 
-const PORT = process.env.PORT || 5000;
+if (require.main === module) {
+  startServer().catch((error) => {
+    console.error(`Server startup failed: ${error.message}`);
+    process.exitCode = 1;
+  });
+}
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+module.exports = { app, startServer };

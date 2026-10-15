@@ -12,6 +12,10 @@ const customerRoutes = require("./routes/customerRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const { errorHandler, notFound } = require("./middleware/errorMiddleware");
+const {
+  authorizeRoles,
+  requireAuth,
+} = require("./middleware/authMiddleware");
 
 const app = express();
 app.disable("x-powered-by");
@@ -56,6 +60,20 @@ app.use("/api/products", productRoutes);
 app.use("/api/customers", customerRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+
+app.get("/api/protected", requireAuth, (req, res) => {
+  return res.json({
+    message: "You are authenticated.",
+    account: { id: req.auth.shopId, role: req.auth.role },
+  });
+});
+
+app.get("/api/admin", requireAuth, authorizeRoles("admin"), (req, res) => {
+  return res.json({
+    message: "Administrator access granted.",
+    account: { id: req.auth.shopId, role: req.auth.role },
+  });
+});
 
 app.get("/", (req, res) => {
   res.send("Hisaab Kitaab API is Running");

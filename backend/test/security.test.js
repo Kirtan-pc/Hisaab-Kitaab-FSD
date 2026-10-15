@@ -55,7 +55,7 @@ test("a verified JWT supplies the shop identity to protected middleware", () => 
   });
 
   assert.equal(nextCalled, true);
-  assert.deepEqual(req.auth, { shopId });
+  assert.deepEqual(req.auth, { shopId, role: "user" });
 });
 
 test("registration rejects fields that could bypass the public shop model", async () => {
@@ -64,6 +64,7 @@ test("registration rejects fields that could bypass the public shop model", asyn
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       name: "Shankar Tea Stall",
+      email: "shop@example.com",
       ownerPhone: "9876543210",
       password: "sample-password-long",
       isAdmin: true,
@@ -81,6 +82,7 @@ test("registration reports invalid field values before accessing MongoDB", async
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       name: " ",
+      email: "not-an-email",
       ownerPhone: "not-a-phone",
       password: "short",
     }),
@@ -90,7 +92,7 @@ test("registration reports invalid field values before accessing MongoDB", async
   assert.equal(response.status, 400);
   assert.deepEqual(
     body.errors.map((error) => error.field).sort(),
-    ["name", "ownerPhone", "password"],
+    ["email", "name", "ownerPhone", "password"],
   );
 });
 

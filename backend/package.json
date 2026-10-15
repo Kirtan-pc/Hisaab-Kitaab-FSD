@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
+    "admin:promote": "node scripts/promoteAdmin.js",
     "test": "node --test"
   },
   "keywords": [],

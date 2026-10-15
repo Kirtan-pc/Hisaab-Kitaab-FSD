@@ -2,18 +2,21 @@ import { useState, type ReactNode } from "react";
 import { Dashboard } from "./components/Dashboard";
 import { useAppContext } from "./context/AppContext";
 import { useLocalStorage } from "./hooks/useLocalStorage";
+import { AuthDemo } from "./components/AuthDemo";
 
 export function App() {
   const { products, language, setLanguage, t, addProduct, removeProduct } =
     useAppContext();
   const [screen, setScreen] = useState<
-    "cover" | "shop" | "products" | "phone" | "dashboard"
+    "cover" | "shop" | "products" | "phone" | "dashboard" | "auth"
   >("cover");
   const [shopName, setShopName] = useLocalStorage("hisaab-shop-name", "");
   const [newProductName, setNewProductName] = useState("");
   const [productError, setProductError] = useState("");
   const [phone, setPhone] = useLocalStorage("hisaab-phone", "");
   if (screen === "dashboard") return <Dashboard shopName={shopName} />;
+  if (screen === "auth")
+    return <AuthDemo initialName={shopName} onBack={() => setScreen("cover")} />;
   if (screen === "shop")
     return (
       <OnboardingPage
@@ -155,6 +158,12 @@ export function App() {
           className="pressable mt-12 w-full rounded-md bg-[#f7e8c8] px-5 py-4 text-base font-bold text-burgundy-dark shadow-[0_5px_0_rgba(45,10,14,.35)]"
         >
           {t("openDiaryCover")} →
+        </button>
+        <button
+          onClick={() => setScreen("auth")}
+          className="mt-4 w-full rounded-md border border-gold/60 px-5 py-3 text-sm font-bold text-gold"
+        >
+          Sign in / registration demo
         </button>
       </div>
     </main>

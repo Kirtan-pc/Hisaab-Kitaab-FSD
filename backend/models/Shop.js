@@ -4,6 +4,19 @@ const shopSchema = new mongoose.Schema(
   {
     name: { type: String, required: true, trim: true },
     ownerPhone: { type: String, required: true, unique: true, trim: true },
+    email: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      unique: true,
+      sparse: true,
+    },
+    role: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+      required: true,
+    },
     passwordHash: { type: String, required: true, select: false },
     products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
   },

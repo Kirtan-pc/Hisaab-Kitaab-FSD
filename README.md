@@ -723,3 +723,62 @@ The problem was sharing order data between the order form and dashboard. State i
 ## What Changed from Experiment 2
 
 The current checkout contained the Experiment 1 vanilla implementation, so this experiment adds the missing React foundation as well. The diary styling and onboarding remain, while order state now has a real Context API owner and visible actions.
+
+---
+
+# Experiment 7 — Docker deployment
+
+The Docker setup for the existing frontend and backend, including Windows
+commands, networking, environment configuration, verification status, and a
+practical screenshot guide, plus Docker Hub publishing instructions, is documented in
+[DOCKER-EXPERIMENT-7.md](./DOCKER-EXPERIMENT-7.md).
+
+## Experiment 8 — Authenticated real-time messages
+
+The sign-in demo includes a Socket.IO message screen. The client connects to
+the existing Express HTTP server, sends its JWT during the handshake, and the
+server joins it to a room derived from the verified shop ID. `chatMessage`
+payloads are validated (1–500 characters), limited to five per 10 seconds per
+connection, timestamped by the server, and broadcast only to that shop's
+room. The server ignores client-supplied sender identities. Messages remain
+in React state only; they are not saved to MongoDB.
+
+### Run locally (Windows PowerShell)
+
+Set up `backend\.env` with the existing MongoDB URI and a JWT secret of at
+least 32 characters. From `C:\Users\KIRTAN\Downloads\FSD\hisaab-kitaab`, use
+two PowerShell terminals:
+
+```powershell
+npm --prefix backend install
+npm --prefix backend run dev
+```
+
+```powershell
+npm --prefix frontend install
+npm --prefix frontend run dev
+```
+
+Open `http://localhost:5173`, select **Sign in / registration demo**, sign in
+to the same account in two tabs, then choose **Open real-time message demo** in
+both. Send a message in either tab; both update without refreshing. The backend
+is at `http://localhost:5000`. Through the existing Compose setup, the
+frontend is at `http://localhost:8080`; `frontend/nginx.conf` proxies
+`/socket.io/` upgrades and polling traffic to the backend.
+The client defaults to the current page origin; `VITE_SOCKET_URL` can override
+it when the Socket.IO server has a different public URL.
+This local setup does not terminate TLS; production deployment must provide
+HTTPS/WSS at its hosting proxy.
+
+### Verification
+
+`npm --prefix backend test` passes 27 tests, including real Socket.IO client
+connections, invalid JWT/origin rejection, rate limiting, malformed/empty/
+overlong message rejection, and shop-room isolation. `npm --prefix frontend
+run build` passes. The production frontend dependency audit reports no
+vulnerabilities; the full audit reports two high-severity advisories in
+development dependencies (`vite` and `source-map-js`), which were not changed
+as part of this feature. These automated tests do not replace manual
+two-browser UI evidence. Compose configuration validation passed, but Docker
+was not run because Docker Desktop's engine was unavailable; a real MongoDB
+account flow and browser screenshots still require local verification.

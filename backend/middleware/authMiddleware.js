@@ -26,6 +26,25 @@ function createAccessToken(shopId, role = "user") {
   });
 }
 
+function verifyAccessToken(token) {
+  const payload = jwt.verify(token, getJwtSecret(), {
+    algorithms: ["HS256"],
+    issuer: TOKEN_ISSUER,
+    audience: TOKEN_AUDIENCE,
+  });
+
+  if (
+    typeof payload === "string" ||
+    typeof payload.sub !== "string" ||
+    !mongoose.isValidObjectId(payload.sub) ||
+    !["user", "admin"].includes(payload.role ?? "user")
+  ) {
+    return null;
+  }
+
+  return { shopId: payload.sub, role: payload.role ?? "user" };
+}
+
 function requireAuth(req, res, next) {
   const authorization = req.get("authorization");
   const match = authorization?.match(/^Bearer\s+(\S+)$/i);
@@ -35,23 +54,12 @@ function requireAuth(req, res, next) {
   }
 
   try {
-    const [, token] = match;
-    const payload = jwt.verify(token, getJwtSecret(), {
-      algorithms: ["HS256"],
-      issuer: TOKEN_ISSUER,
-      audience: TOKEN_AUDIENCE,
-    });
-
-    if (
-      typeof payload === "string" ||
-      typeof payload.sub !== "string" ||
-      !mongoose.isValidObjectId(payload.sub) ||
-      !["user", "admin"].includes(payload.role ?? "user")
-    ) {
+    const auth = verifyAccessToken(match[1]);
+    if (!auth) {
       return res.status(401).json({ message: "The access token is invalid." });
     }
 
-    req.auth = { shopId: payload.sub, role: payload.role ?? "user" };
+    req.auth = auth;
     return next();
   } catch (error) {
     if (
@@ -79,4 +87,9 @@ function authorizeRoles(...allowedRoles) {
   };
 }
 
-module.exports = { authorizeRoles, createAccessToken, requireAuth };
+module.exports = {
+  authorizeRoles,
+  createAccessToken,
+  requireAuth,
+  verifyAccessToken,
+};

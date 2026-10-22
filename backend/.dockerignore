@@ -1,0 +1,11 @@
+node_modules
+coverage
+test
+scripts
+.env
+.env.*
+*.env
+*credentials*
+.git
+*.log
+README.md

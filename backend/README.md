@@ -263,3 +263,29 @@ operations in account tests are controlled test doubles; these are not genuine
 database integration tests. A real registration, login, and role-promotion
 demonstration requires the configured private MongoDB connection and fresh
 test account values.
+
+## Experiment 7 — Docker deployment
+
+The backend Dockerfile runs this same API as a non-root Node.js process and
+checks that the API and MongoDB are ready. Compose reads the existing private
+`backend/.env` at runtime; it does not bake credentials into the image. See
+the project-root [Docker experiment guide](../DOCKER-EXPERIMENT-7.md) for
+environment setup, commands, proxy architecture, verification, and the
+practical screenshot checklist.
+
+## Experiment 8 — Socket.IO messages
+
+Socket.IO is attached to the existing Express HTTP server. Clients must
+present the same short-lived JWT used by the REST API in the Socket.IO
+handshake. The shared token verifier supplies the shop ID; messages are
+broadcast only to that shop's room. The `chatMessage` event accepts a text
+payload of 1–500 characters, permits at most five messages per connection in
+10 seconds, and uses a server-generated sender ID, timestamp, and message ID.
+Malformed messages receive an acknowledgement error and are not broadcast.
+Socket.IO messages are not persisted.
+
+Allowed origins come from `CORS_ORIGIN`. The Vite proxy handles `/socket.io`
+during development, and Nginx forwards WebSocket upgrades and polling requests
+for the Docker frontend. Run `npm test` here for API and live Socket.IO
+integration tests; these tests use an in-process HTTP server and do not need
+MongoDB.

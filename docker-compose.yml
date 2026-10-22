@@ -1,0 +1,36 @@
+services:
+  backend:
+    image: kirtan15/hisaab-kitaab-backend:latest
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    env_file:
+      - ./backend/.env
+    environment:
+      PORT: "5000"
+      CORS_ORIGIN: "http://localhost:8080,http://127.0.0.1:8080"
+    ports:
+      - "5000:5000"
+    init: true
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  frontend:
+    image: kirtan15/hisaab-kitaab-frontend:latest
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    init: true
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

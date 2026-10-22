@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { RealtimeChat } from "./RealtimeChat";
 
 interface Account {
   id: string;
@@ -29,6 +30,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [showChat, setShowChat] = useState(false);
 
   async function submitCredentials(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -105,6 +107,18 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
     setToken("");
     setResult("");
     setError("");
+    setShowChat(false);
+  }
+
+  if (account && showChat) {
+    return (
+      <RealtimeChat
+        token={token}
+        accountId={account.id}
+        accountName={account.name}
+        onBack={() => setShowChat(false)}
+      />
+    );
   }
 
   return (
@@ -132,6 +146,13 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
               <p>Role: {account.role}</p>
             </div>
             <div className="grid gap-2">
+              <button
+                type="button"
+                onClick={() => setShowChat(true)}
+                className="rounded-md border border-burgundy px-4 py-3 text-sm font-bold text-burgundy"
+              >
+                Open real-time message demo
+              </button>
               <button
                 type="button"
                 disabled={busy}

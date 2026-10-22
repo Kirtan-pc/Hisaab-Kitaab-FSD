@@ -1,4 +1,5 @@
 const express = require("express");
+const http = require("node:http");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const helmet = require("helmet");
@@ -16,8 +17,10 @@ const {
   authorizeRoles,
   requireAuth,
 } = require("./middleware/authMiddleware");
+const { createSocketServer } = require("./socket");
 
 const app = express();
+const server = http.createServer(app);
 app.disable("x-powered-by");
 
 const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
@@ -91,6 +94,8 @@ app.get("/api/health", (req, res) => {
 app.use(notFound);
 app.use(errorHandler);
 
+const io = createSocketServer(server, allowedOrigins);
+
 async function startServer() {
   if (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32) {
     throw new Error("JWT_SECRET must contain at least 32 characters.");
@@ -104,7 +109,7 @@ async function startServer() {
   await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
 
   const port = process.env.PORT || 5000;
-  return app.listen(port, () => {
+  return server.listen(port, () => {
     console.log(`Hisaab Kitaab API listening on port ${port}`);
   });
 }
@@ -116,4 +121,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, startServer };
+module.exports = { app, io, server, startServer };

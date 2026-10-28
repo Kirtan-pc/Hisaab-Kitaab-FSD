@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import type { Customer, Order, Product } from "../types";
+import { apiUrl } from "../api";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { translations, type TranslationKey } from "../translations";
 
@@ -81,7 +82,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    fetch("/api/health").catch(() => {
+    fetch(apiUrl("/api/health")).catch(() => {
       // The frontend continues using localStorage when the backend is offline.
     });
   }, []);

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { io, type Socket } from "socket.io-client";
+import { API_BASE_URL } from "../api";
 
 interface ChatMessage {
   id: string;
@@ -39,7 +40,7 @@ export function RealtimeChat({
 
   useEffect(() => {
     const socket = io(
-      import.meta.env.VITE_SOCKET_URL || window.location.origin,
+      import.meta.env.VITE_SOCKET_URL || API_BASE_URL || window.location.origin,
       { auth: { token }, reconnection: true },
     ) as Socket<ServerToClientEvents, ClientToServerEvents>;
     socketRef.current = socket;

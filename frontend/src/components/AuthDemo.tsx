@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { apiUrl } from "../api";
 import { RealtimeChat } from "./RealtimeChat";
 
 interface Account {
@@ -44,7 +45,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
         : { email, password };
 
     try {
-      const response = await fetch(`/api/auth/${mode}`, {
+      const response = await fetch(apiUrl(`/api/auth/${mode}`), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -79,7 +80,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
     setResult("");
 
     try {
-      const response = await fetch(path, {
+      const response = await fetch(apiUrl(path), {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = (await response.json()) as { message?: string };

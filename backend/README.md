@@ -289,3 +289,19 @@ during development, and Nginx forwards WebSocket upgrades and polling requests
 for the Docker frontend. Run `npm test` here for API and live Socket.IO
 integration tests; these tests use an in-process HTTP server and do not need
 MongoDB.
+
+## Experiment 10 — Render deployment
+
+The root [`render.yaml`](../render.yaml) configures this directory as a Render
+Node.js Web Service with `npm ci`, `npm start`, and `/api/health`. Add
+`MONGO_URI` and the deployed frontend's exact origin as `CORS_ORIGIN` in the
+Render environment. The Blueprint generates `JWT_SECRET`; Render provides
+`PORT` automatically. The health endpoint reports the database state as
+`connected` or `unavailable`; it does not claim that a database is connected
+when it is not.
+
+The frontend origin is public configuration, but MongoDB credentials and
+`JWT_SECRET` are server-only secrets. Enter them in Render's environment
+settings, never in the frontend or Git. Full Experiment 10 setup and local
+verification are documented in the project-root
+[`complete_detailed_overview.md`](../complete_detailed_overview.md).

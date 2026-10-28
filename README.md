@@ -782,3 +782,32 @@ as part of this feature. These automated tests do not replace manual
 two-browser UI evidence. Compose configuration validation passed, but Docker
 was not run because Docker Desktop's engine was unavailable; a real MongoDB
 account flow and browser screenshots still require local verification.
+
+## Experiment 10 — GitHub Actions, Vercel, and Render
+
+The GitHub Actions workflow at `.github/workflows/ci.yml` runs the Vite
+production build and the backend test suite on pushes and pull requests. It
+checks CI only; Vercel and Render deploy the frontend and backend separately
+when each hosting service is connected to the repository.
+
+The Vercel project uses `frontend` as its root directory, `npm run build` as
+its build command, and `dist` as its output directory.
+After the first Vercel deployment gives you its public origin, set Render's
+`CORS_ORIGIN` to that exact origin. Then set `VITE_API_BASE_URL` in Vercel to
+the actual Render service origin (for example,
+`https://your-service.onrender.com`, without a trailing slash). This setting is
+embedded in the frontend build, so redeploy after changing it. The same
+configured API origin is used for Socket.IO unless `VITE_SOCKET_URL` is
+explicitly set.
+
+The root `render.yaml` describes the backend Web Service (`backend` root,
+`npm ci`, `npm start`, and `/api/health`). Set `MONGO_URI` to the private
+MongoDB connection string and `CORS_ORIGIN` to the exact deployed frontend
+origin. The Blueprint generates `JWT_SECRET`; Render supplies `PORT`. Never
+put these server-side values in the frontend or commit them.
+
+See [notes.md](./notes.md) for concepts and common errors,
+[progress.md](./progress.md) for verified status, and
+[complete_detailed_overview.md](./complete_detailed_overview.md) for the full
+deployment walkthrough. Account setup, secrets, and cloud verification still
+require your GitHub, Vercel, and Render accounts.

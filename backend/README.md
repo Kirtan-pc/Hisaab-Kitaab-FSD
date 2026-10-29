@@ -258,7 +258,8 @@ Capture genuine results from your own run; do not fabricate screenshots.
 
 ### Test scope
 
-`npm test` runs 22 HTTP and model tests without requiring MongoDB. Model
+`npm test` runs 30 HTTP, model-double, and Socket.IO integration tests without
+requiring MongoDB. Model
 operations in account tests are controlled test doubles; these are not genuine
 database integration tests. A real registration, login, and role-promotion
 demonstration requires the configured private MongoDB connection and fresh
@@ -267,11 +268,12 @@ test account values.
 ## Experiment 7 — Docker deployment
 
 The backend Dockerfile runs this same API as a non-root Node.js process and
-checks that the API and MongoDB are ready. Compose reads the existing private
-`backend/.env` at runtime; it does not bake credentials into the image. See
-the project-root [Docker experiment guide](../DOCKER-EXPERIMENT-7.md) for
-environment setup, commands, proxy architecture, verification, and the
-practical screenshot checklist.
+checks that the API and MongoDB are ready. Compose reads `backend/.env` at
+runtime; the Docker ignore rules prevent environment files from entering the
+build context. The project root contains the Compose configuration, while the
+frontend proxy is configured in `frontend/nginx.conf`. Compose configuration
+parsed during the 2026-10-29 audit, but Docker Engine was unavailable, so
+image and container behavior remain unverified.
 
 ## Experiment 8 — Socket.IO messages
 

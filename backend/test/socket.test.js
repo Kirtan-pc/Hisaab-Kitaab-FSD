@@ -82,6 +82,44 @@ test("authenticated clients receive messages only in their shop room", async () 
   assert.equal(otherShopReceived, false);
 });
 
+test("the Socket.IO host continues serving the REST health endpoint", async () => {
+  const response = await fetch(`${socketUrl}/api/health`);
+  const body = await response.json();
+
+  assert.equal(response.status, 200);
+  assert.equal(body.service, "hisaab-kitaab-api");
+});
+
+test("disconnected clients miss live messages and receive one after reconnecting", async () => {
+  const shopToken = createAccessToken(firstShop);
+  const disconnectedClient = await connect(shopToken);
+  const connectedPeer = await connect(shopToken);
+  const received = [];
+  disconnectedClient.on("chatMessage", (message) => received.push(message));
+
+  const disconnected = new Promise((resolve) =>
+    disconnectedClient.once("disconnect", resolve),
+  );
+  disconnectedClient.disconnect();
+  await disconnected;
+  await send(connectedPeer, { text: "While disconnected" });
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(received.length, 0);
+
+  const reconnected = new Promise((resolve) =>
+    disconnectedClient.once("connect", resolve),
+  );
+  disconnectedClient.connect();
+  await reconnected;
+  const nextMessage = new Promise((resolve) =>
+    disconnectedClient.once("chatMessage", resolve),
+  );
+  await send(connectedPeer, { text: "After reconnect" });
+
+  assert.equal((await nextMessage).text, "After reconnect");
+  assert.equal(received.length, 1);
+});
+
 test("empty, malformed, and overlong messages are rejected", async () => {
   const sender = await connect(createAccessToken(firstShop));
   let broadcastCount = 0;

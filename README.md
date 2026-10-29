@@ -2,6 +2,82 @@
 
 > A complete walkthrough: from an empty folder to the running diary-style shop app you see today.
 
+## Current checkout and audit status
+
+The current application is split into `frontend` (React, TypeScript, Vite, and
+Tailwind CSS) and `backend` (Express, Mongoose, JWT authentication, and
+Socket.IO). There is no root `package.json`; use the commands in the
+appropriate directory below.
+
+Sections below retain historical experiment notes. In particular, the early
+vanilla-TypeScript scaffold described there is not the current frontend;
+current React entry points are `frontend/src/main.tsx` and
+`frontend/src/App.tsx`.
+
+The app has two distinct entry points. **Open local preview** uses browser
+`localStorage` and example ledger data; it is not synchronized with an account.
+**Sign in for your saved ledger** opens the authenticated dashboard, which
+loads products, customers, and orders from the backend and sends ledger
+changes to its protected CRUD routes. The JWT is kept in memory, so signing in
+again is required after a page refresh. Live MongoDB persistence still needs
+the manual verification in [notes.md](./notes.md).
+
+Audit snapshot (2026-10-29):
+
+- `npm --prefix backend test` — 30 tests passed, including HTTP security,
+  authentication, shop-isolation, and two-client Socket.IO tests.
+- `npm --prefix frontend run build` — TypeScript check and production build
+  passed.
+- The local-preview onboarding, product creation, order entry, browser
+  persistence, language switch, and a browser without `crypto.randomUUID()`
+  were exercised in a browser.
+- The authenticated ledger frontend now uses the existing API routes; its
+  production TypeScript/build check passes. Its database-backed browser flow
+  has not been exercised because MongoDB was unavailable.
+- Compose configuration parsed, but Docker Engine was unavailable; images and
+  containers were not run.
+- No live MongoDB, GitHub Actions run, Vercel/Render deployment, or live
+  Socket.IO connection was verified. The original experiment handouts are not
+  present in this repository.
+
+### Run the current checkout (Windows PowerShell)
+
+```powershell
+# Frontend
+Set-Location .\frontend
+npm ci
+npm run dev
+```
+
+For the complete local database-backed sign-in, CRUD, isolation, Docker, and
+deployment verification sequence, see [notes.md](./notes.md). Keep local
+preview data separate from the authenticated account ledger.
+
+```powershell
+# Backend, in a separate terminal opened at the repository root
+Set-Location .\backend
+npm ci
+npm run dev
+```
+
+```powershell
+# Checks and Docker commands, from the repository root
+npm --prefix .\backend test
+npm --prefix .\frontend run build
+
+# Docker Compose, from the project root (requires Docker Engine and backend\.env)
+docker compose config --quiet
+docker compose up --build -d
+docker compose ps
+docker compose logs
+docker compose down
+```
+
+Backend environment-variable names: `MONGO_URI`, `JWT_SECRET`,
+`CORS_ORIGIN`, and `PORT`. Frontend deployment configuration uses
+`VITE_API_BASE_URL`; `VITE_SOCKET_URL` is an optional Socket.IO override.
+Never paste private environment-file contents into logs or documentation.
+
 ---
 
 ## 0. Where Did We Start?
@@ -406,49 +482,45 @@ The hash in filenames (`CbDE475g`) ensures browsers always get fresh files when 
 
 | FSD Concept         | How it's implemented                                                   |
 | ------------------- | ---------------------------------------------------------------------- |
-| Responsive Design   | Tailwind breakpoints (`md:grid-cols-2`), mobile-first layout           |
-| CSS Framework       | Tailwind CSS v4 with custom `@theme` colours                           |
-| Utility-first CSS   | All styling via Tailwind classes in HTML strings                       |
-| Component structure | Each page is a function returning HTML (precursor to React components) |
-| State management    | Single `state` object (precursor to React state / Redux)               |
-| DOM manipulation    | `querySelector`, `addEventListener`, `innerHTML`                       |
-| Event handling      | Button clicks, input changes, form validation                          |
-| Mobile UX           | Large touch targets (48px+), `user-scalable=no`, touch feedback        |
-| Accessibility       | `:focus-visible` outlines, `aria-label` on icon buttons                |
-| Animation           | CSS keyframes for page-turn effect, reduced-motion support             |
+| Responsive UI       | Mobile-first React screens styled with Tailwind CSS                    |
+| CSS framework       | Tailwind CSS v4 utilities and custom diary colors                      |
+| Component structure | `frontend/src/App.tsx` and reusable dashboard/form/chat components     |
+| State and events    | React state, Context API, controlled inputs, and form handlers          |
+| Persistence         | Browser `localStorage` for the diary prototype                         |
+| Accessibility       | Labels, status messages, and accessible names on controls               |
+| Animation           | CSS page transitions with reduced-motion support                       |
 
 ---
 
-## 9. Concepts We'll Learn Next (Future Experiments)
+## 9. Experiment implementation map
 
 | #     | Topic               | Where in Hisaab किताब                                                                             |
 | ----- | ------------------- | ------------------------------------------------------------------------------------------------- |
-| ~~2~~ | ~~React Hooks~~     | ✅ Done — `useState`, `useEffect`, `useContext`, `useCallback`, `useMemo`, `useRef`, custom hooks |
-| 3     | Redux / Context API | Global state for products, customers, live order feed                                             |
-| 4     | REST API + MongoDB  | CRUD for Shop, Product, Customer, Order, Payment                                                  |
-| 5     | Secure REST APIs    | Server-side validation of voice/typed input                                                       |
-| 6     | JWT Authentication  | Shop owner registration + login (multi-tenant)                                                    |
-| 7     | Docker              | Separate Dockerfiles for client and server                                                        |
-| 8     | WebSockets          | Real-time order feed across devices                                                               |
-| 9     | Docker Compose      | `docker-compose up` → client + server + MongoDB                                                   |
-| 10    | CI/CD               | GitHub Actions: lint → build → push → deploy                                                      |
+| 2     | React hooks         | Hooks are used across `frontend/src`; browser/build checks passed, but no lint or hook-specific test suite is configured |
+| 3     | Context API         | Shared local-preview state plus a separate authenticated server-backed ledger; live persistence not verified |
+| 4     | REST API + MongoDB  | Backend CRUD routes are wired into the authenticated ledger; live MongoDB CRUD was not verified  |
+| 5     | Secure REST APIs    | Validation, auth middleware, rate limits, Helmet, CORS, and safe error responses have tests       |
+| 6     | JWT and roles       | Registration/login, token checks, admin roles, and shop scoping have tests                       |
+| 7     | Docker              | Frontend/backend Dockerfiles exist; image builds were blocked by unavailable Docker Engine        |
+| 8     | Socket.IO           | JWT-authenticated shop rooms and real two-client message tests; deployed browser flow unverified  |
+| 9     | Docker Compose      | Compose configuration parses; containers were not started                                         |
+| 10    | CI/deployment       | GitHub Actions and Render configuration exist; external CI and cloud deployments were not verified |
 
 ---
 
 ## 10. Quick Reference — Commands
 
 ```bash
-# Development
-npm run dev          # Start Vite dev server (hot reload)
+# Run from frontend/
+npm ci
+npm run dev
+npm run build
+npm run preview
 
-# Build
-npm run build        # Type-check + produce dist/ folder
-
-# Preview production build
-npm run preview      # Serve dist/ locally to test production build
-
-# Install dependencies (first time)
-npm install          # Read package.json + install everything
+# Run from backend/
+npm ci
+npm run dev
+npm test
 ```
 
 ---
@@ -729,9 +801,10 @@ The current checkout contained the Experiment 1 vanilla implementation, so this 
 # Experiment 7 — Docker deployment
 
 The Docker setup for the existing frontend and backend, including Windows
-commands, networking, environment configuration, verification status, and a
-practical screenshot guide, plus Docker Hub publishing instructions, is documented in
-[DOCKER-EXPERIMENT-7.md](./DOCKER-EXPERIMENT-7.md).
+commands, networking, and environment configuration is in `docker-compose.yml`,
+`frontend/Dockerfile`, `frontend/nginx.conf`, and `backend/Dockerfile`. The
+Compose configuration parsed during the audit, but Docker Engine was
+unavailable, so builds and container behavior remain unverified.
 
 ## Experiment 8 — Authenticated real-time messages
 
@@ -772,16 +845,14 @@ HTTPS/WSS at its hosting proxy.
 
 ### Verification
 
-`npm --prefix backend test` passes 27 tests, including real Socket.IO client
-connections, invalid JWT/origin rejection, rate limiting, malformed/empty/
-overlong message rejection, and shop-room isolation. `npm --prefix frontend
-run build` passes. The production frontend dependency audit reports no
-vulnerabilities; the full audit reports two high-severity advisories in
-development dependencies (`vite` and `source-map-js`), which were not changed
-as part of this feature. These automated tests do not replace manual
-two-browser UI evidence. Compose configuration validation passed, but Docker
-was not run because Docker Desktop's engine was unavailable; a real MongoDB
-account flow and browser screenshots still require local verification.
+`npm --prefix backend test` passes 30 tests, including two independent
+Socket.IO clients, shop-room isolation, invalid JWT/origin rejection, message
+validation, rate limiting, disconnect/reconnect, and a REST health request on
+the Socket.IO host. `npm --prefix frontend run build` passes. The browser
+ledger flow was exercised, but the authenticated chat UI was not connected to
+a live MongoDB account. No dependency audit was run in this pass. Compose
+configuration validation passed; Docker Engine was unavailable, so image and
+container checks remain blocked.
 
 ## Experiment 10 — GitHub Actions, Vercel, and Render
 
@@ -811,3 +882,21 @@ See [notes.md](./notes.md) for concepts and common errors,
 [complete_detailed_overview.md](./complete_detailed_overview.md) for the full
 deployment walkthrough. Account setup, secrets, and cloud verification still
 require your GitHub, Vercel, and Render accounts.
+
+## Repository audit results (2026-10-29)
+
+The audit exercised the browser onboarding, product creation, order entry,
+reload persistence, and language switch. It also checked the product/order
+flow with `crypto.randomUUID()` disabled; the local ID fallback worked.
+Backend tests use mocked model operations for database-dependent routes, so
+they do not prove that MongoDB is reachable or that live CRUD persists.
+
+The local preview remains localStorage-backed and contains example entries.
+The authenticated dashboard uses the backend API and does not display those
+preview records, but real database persistence has not yet been verified. The
+API's Socket.IO implementation was tested with two independent clients,
+including shop-room isolation and disconnect/reconnect. Docker Engine was
+unavailable, so only Compose config parsing was verified. An isolated backend
+startup attempt failed because no MongoDB listener was available. See
+[notes.md](./notes.md) for the step-by-step manual checklist and
+[progress.md](./progress.md) for the full experiment status.

@@ -1,32 +1,32 @@
 import { useState, type FormEvent } from "react";
-import { apiUrl } from "../api";
+import { apiRequest, ApiError } from "../api";
+import { useAppContext } from "../context/AppContext";
 import { RealtimeChat } from "./RealtimeChat";
-
-interface Account {
-  id: string;
-  name: string;
-  email: string;
-  ownerPhone: string;
-  role: "user" | "admin";
-}
+import type { AuthAccount, AuthSession } from "../types";
 
 interface AuthResponse {
   token: string;
-  shop: Account;
+  shop: AuthAccount;
 }
 
 interface AuthDemoProps {
   initialName: string;
   onBack: () => void;
+  onAuthenticated: (session: AuthSession) => void;
 }
 
-export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
+export function AuthDemo({
+  initialName,
+  onBack,
+  onAuthenticated,
+}: AuthDemoProps) {
+  const { language, setLanguage, t } = useAppContext();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [name, setName] = useState(initialName);
   const [email, setEmail] = useState("");
   const [ownerPhone, setOwnerPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [account, setAccount] = useState<Account | null>(null);
+  const [account, setAccount] = useState<AuthAccount | null>(null);
   const [token, setToken] = useState("");
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
@@ -45,29 +45,29 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
         : { email, password };
 
     try {
-      const response = await fetch(apiUrl(`/api/auth/${mode}`), {
+      const data = await apiRequest<AuthResponse>(`/api/auth/${mode}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body,
       });
-      const data = (await response.json()) as AuthResponse | { message?: string };
-      if (!response.ok || !("token" in data) || !("shop" in data)) {
-        throw new Error(
-          "message" in data && data.message
-            ? data.message
-            : "The authentication request failed.",
-        );
-      }
 
       setAccount(data.shop);
       setToken(data.token);
       setPassword("");
+      onAuthenticated({ token: data.token, account: data.shop });
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Could not connect to the backend.",
-      );
+      if (requestError instanceof ApiError) {
+        if (requestError.status === 429) {
+          setError(t("authRateLimited"));
+        } else if (requestError.status === 409) {
+          setError(t("authAccountExists"));
+        } else if (requestError.status === 400) {
+          setError(t("authInvalidDetails"));
+        } else {
+          setError(requestError.message);
+        }
+      } else {
+        setError(t("authNetworkError"));
+      }
     } finally {
       setBusy(false);
     }
@@ -80,23 +80,18 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
     setResult("");
 
     try {
-      const response = await fetch(apiUrl(path), {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = (await response.json()) as { message?: string };
-      if (!response.ok) {
-        if (response.status === 401) {
-          setAccount(null);
-          setToken("");
-        }
-        throw new Error(data.message ?? "The API request failed.");
+      const data = await apiRequest<{ message?: string }>(path, { token });
+      if (path === "/api/auth/me") {
+        setAccount((current) =>
+          current && data ? { ...current, ...data } : current,
+        );
       }
       setResult(JSON.stringify(data, null, 2));
     } catch (requestError) {
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Could not connect to the backend.",
+          : t("authNetworkError"),
       );
     } finally {
       setBusy(false);
@@ -124,19 +119,26 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
 
   return (
     <main className="page-in-right diary-shell paper-page flex flex-col px-7 py-6">
-      <button
-        type="button"
-        onClick={onBack}
-        className="w-fit text-sm font-semibold text-burgundy"
-      >
-        ← Back to cover
-      </button>
+      <div className="flex items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="w-fit text-sm font-semibold text-burgundy"
+        >
+          ← {t("backToCover")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setLanguage(language === "hi" ? "en" : "hi")}
+          className="rounded-full border border-line px-3 py-1 text-[11px] font-bold text-ink-soft"
+          aria-label={t("switchLanguage")}
+        >
+          {language === "hi" ? "English" : "हिंदी"}
+        </button>
+      </div>
       <section className="mt-10 border-l-2 border-margin pl-5">
-        <p className="text-[10px] font-bold tracking-[.22em] text-burgundy">
-          EXPERIMENT 6 · JWT
-        </p>
         <h1 className="mt-3 text-3xl font-bold leading-tight text-ink">
-          Account access
+          {t("accountAccess")}
         </h1>
 
         {account ? (
@@ -144,7 +146,9 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
             <div className="border border-line bg-paper/70 p-4 text-sm text-ink">
               <p className="font-bold">{account.name}</p>
               <p>{account.email}</p>
-              <p>Role: {account.role}</p>
+              <p>
+                {t("role")}: {account.role}
+              </p>
             </div>
             <div className="grid gap-2">
               <button
@@ -152,7 +156,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                 onClick={() => setShowChat(true)}
                 className="rounded-md border border-burgundy px-4 py-3 text-sm font-bold text-burgundy"
               >
-                Open real-time message demo
+                {t("openRealtimeChat")}
               </button>
               <button
                 type="button"
@@ -160,7 +164,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                 onClick={() => void callApi("/api/auth/me")}
                 className="rounded-md border border-line px-4 py-3 text-sm font-bold text-ink disabled:opacity-50"
               >
-                Load my account (/api/auth/me)
+                {t("loadMyAccount")}
               </button>
               <button
                 type="button"
@@ -168,7 +172,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                 onClick={() => void callApi("/api/protected")}
                 className="rounded-md bg-burgundy px-4 py-3 text-sm font-bold text-[#f8edd4] disabled:opacity-50"
               >
-                Test authenticated route
+                {t("testAuthenticatedRoute")}
               </button>
               {account.role === "admin" && (
                 <button
@@ -177,7 +181,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                   onClick={() => void callApi("/api/admin")}
                   className="rounded-md border border-burgundy px-4 py-3 text-sm font-bold text-burgundy disabled:opacity-50"
                 >
-                  Test administrator route
+                  {t("testAdministratorRoute")}
                 </button>
               )}
               <button
@@ -185,7 +189,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                 onClick={signOut}
                 className="px-4 py-2 text-sm font-bold text-due"
               >
-                Sign out
+                {t("signOut")}
               </button>
             </div>
             {result && (
@@ -211,7 +215,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                       : "text-ink-soft"
                   }`}
                 >
-                  {option === "login" ? "Sign in" : "Register"}
+                  {option === "login" ? t("signIn") : t("register")}
                 </button>
               ))}
             </div>
@@ -219,7 +223,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
               {mode === "register" && (
                 <>
                   <label className="block text-xs font-bold text-ink-soft">
-                    Shop name
+                    {t("shopNameLabel")}
                     <input
                       required
                       maxLength={100}
@@ -230,7 +234,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                     />
                   </label>
                   <label className="block text-xs font-bold text-ink-soft">
-                    Owner phone
+                    {t("ownerPhone")}
                     <input
                       required
                       type="tel"
@@ -243,7 +247,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                 </>
               )}
               <label className="block text-xs font-bold text-ink-soft">
-                Email
+                {t("email")}
                 <input
                   required
                   type="email"
@@ -254,7 +258,7 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                 />
               </label>
               <label className="block text-xs font-bold text-ink-soft">
-                Password
+                {t("password")}
                 <input
                   required
                   type="password"
@@ -278,10 +282,10 @@ export function AuthDemo({ initialName, onBack }: AuthDemoProps) {
                 className="w-full rounded-md bg-burgundy px-4 py-3 font-bold text-[#f8edd4] disabled:opacity-50"
               >
                 {busy
-                  ? "Please wait…"
+                  ? t("pleaseWait")
                   : mode === "register"
-                    ? "Create account"
-                    : "Sign in"}
+                    ? t("createAccount")
+                    : t("signIn")}
               </button>
             </form>
           </>

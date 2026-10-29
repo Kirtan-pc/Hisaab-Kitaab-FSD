@@ -17,9 +17,14 @@ export function Dashboard({ shopName }: { shopName: string }) {
     <main className="page-in-right diary-shell paper-page flex flex-col">
       <header className="border-b border-burgundy-dark bg-burgundy px-6 py-5 text-[#f8edd4]">
         <div className="flex items-start justify-between">
-          <p className="text-[10px] font-bold tracking-[.22em] text-gold">
-            {t("todaysLedger")}
-          </p>
+          <div>
+            <p className="text-[10px] font-bold tracking-[.22em] text-gold">
+              {t("todaysLedger")}
+            </p>
+            <p className="mt-1 text-[10px] text-[#e6cfa6]">
+              {t("localPreview")}
+            </p>
+          </div>
           <button
             onClick={() => setLanguage(language === "hi" ? "en" : "hi")}
             className="pressable rounded-full border border-gold/60 px-3 py-1 text-[11px] font-bold text-gold"

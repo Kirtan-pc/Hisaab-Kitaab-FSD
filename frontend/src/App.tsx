@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
 import { Dashboard } from "./components/Dashboard";
 import { useAppContext } from "./context/AppContext";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { AuthDemo } from "./components/AuthDemo";
+import { AuthenticatedDashboard } from "./components/AuthenticatedDashboard";
+import type { AuthSession } from "./types";
 
 export function App() {
   const { products, language, setLanguage, t, addProduct, removeProduct } =
@@ -14,9 +16,35 @@ export function App() {
   const [newProductName, setNewProductName] = useState("");
   const [productError, setProductError] = useState("");
   const [phone, setPhone] = useLocalStorage("hisaab-phone", "");
+  const [authSession, setAuthSession] = useState<AuthSession | null>(null);
+  const handleSignOut = useCallback(() => {
+    setAuthSession(null);
+    setScreen("cover");
+  }, []);
+  const handleUnauthorized = useCallback(() => {
+    setAuthSession(null);
+    setScreen("auth");
+  }, []);
+
+  if (authSession) {
+    return (
+      <AuthenticatedDashboard
+        session={authSession}
+        onSignOut={handleSignOut}
+        onUnauthorized={handleUnauthorized}
+      />
+    );
+  }
+
   if (screen === "dashboard") return <Dashboard shopName={shopName} />;
   if (screen === "auth")
-    return <AuthDemo initialName={shopName} onBack={() => setScreen("cover")} />;
+    return (
+      <AuthDemo
+        initialName={shopName}
+        onBack={() => setScreen("cover")}
+        onAuthenticated={setAuthSession}
+      />
+    );
   if (screen === "shop")
     return (
       <OnboardingPage
@@ -126,8 +154,11 @@ export function App() {
         <NextButton
           disabled={phone.length !== 10}
           onClick={() => setScreen("dashboard")}
-          label={t("openDiary")}
+          label={t("openLocalPreview")}
         />
+        <p className="mt-3 text-center text-xs text-ink-soft">
+          {t("localPreview")}
+        </p>
       </OnboardingPage>
     );
   return (
@@ -157,13 +188,13 @@ export function App() {
           onClick={() => setScreen("shop")}
           className="pressable mt-12 w-full rounded-md bg-[#f7e8c8] px-5 py-4 text-base font-bold text-burgundy-dark shadow-[0_5px_0_rgba(45,10,14,.35)]"
         >
-          {t("openDiaryCover")} →
+          {t("openLocalPreview")} →
         </button>
         <button
           onClick={() => setScreen("auth")}
           className="mt-4 w-full rounded-md border border-gold/60 px-5 py-3 text-sm font-bold text-gold"
         >
-          Sign in / registration demo
+          {t("openAccount")}
         </button>
       </div>
     </main>

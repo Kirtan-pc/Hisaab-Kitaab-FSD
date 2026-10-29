@@ -1,13 +1,11 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 import type { Customer, Order, Product } from "../types";
-import { apiUrl } from "../api";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { translations, type TranslationKey } from "../translations";
 
@@ -59,6 +57,13 @@ const initialOrders: Order[] = [
   },
 ];
 
+function createLocalId() {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+}
+
 export const AppContext = createContext<AppContextValue | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
@@ -81,12 +86,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     initialOrders,
   );
 
-  useEffect(() => {
-    fetch(apiUrl("/api/health")).catch(() => {
-      // The frontend continues using localStorage when the backend is offline.
-    });
-  }, []);
-
   function addOrder(
     customerName: string,
     productId: string,
@@ -103,13 +102,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!existingCustomer) {
       setCustomers((current) => [
         ...current,
-        { id: crypto.randomUUID(), name: customerName },
+        { id: createLocalId(), name: customerName },
       ]);
     }
 
     setOrders((current) => [
       {
-        id: crypto.randomUUID(),
+        id: createLocalId(),
         customerName,
         productName: product.hindiName,
         quantity,
@@ -134,7 +133,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (duplicate) return false;
     setProducts((current) => [
       ...current,
-      { id: crypto.randomUUID(), name: trimmedName, hindiName: trimmedName },
+      { id: createLocalId(), name: trimmedName, hindiName: trimmedName },
     ]);
     return true;
   }

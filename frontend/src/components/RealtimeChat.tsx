@@ -25,11 +25,13 @@ export function RealtimeChat({
   accountId,
   accountName,
   onBack,
+  onUnauthorized,
 }: {
   token: string;
   accountId: string;
   accountName: string;
   onBack: () => void;
+  onUnauthorized?: () => void;
 }) {
   const socketRef =
     useRef<Socket<ServerToClientEvents, ClientToServerEvents> | null>(null);
@@ -53,6 +55,9 @@ export function RealtimeChat({
     const onConnectError = (connectError: Error) => {
       setConnected(false);
       setError(connectError.message);
+      if (connectError.message === "Authentication required.") {
+        onUnauthorized?.();
+      }
     };
     const onChatMessage = (incoming: ChatMessage) => {
       setMessages((current) => [...current.slice(-99), incoming]);

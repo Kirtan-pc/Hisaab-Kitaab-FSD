@@ -75,7 +75,10 @@ router.post(
     validateRequest,
   ],
   async (req, res) => {
-    if (req.params.sourceId === req.params.targetId) {
+    if (
+      req.params.sourceId.toLowerCase() ===
+      req.params.targetId.toLowerCase()
+    ) {
       return res.status(400).json({ message: "Choose two different customers." });
     }
 
